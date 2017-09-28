@@ -5,6 +5,7 @@
  */
 package com.itesm.signum;
 
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
@@ -17,7 +18,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.swing.ImageIcon;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JPanel;
 import javax.swing.JTextField;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -36,20 +39,21 @@ import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
 import org.json.JSONObject;
 
-public class VideoProcessor{
+public class VideoProcessor extends Thread{
     
-    private JLabel video;
-    private JTextField texto;
+    private SignumInterface interfaz;
     private FrameGrab grab;
+    private final int PANEL_WIDTH = 388, PANEL_HEIGHT = 307;
+    private String filePath;
     
-    public VideoProcessor(JLabel video, JTextField texto){
-        this.video = video;
-        this.texto = texto;
+    public VideoProcessor(SignumInterface interfaz, String filePath){
+        this.interfaz = interfaz;
+        this.filePath = filePath;
     }
     
-    public boolean loadVideo(String filePath){
+    public boolean loadVideo(){
         try {
-            File file = new File("/Users/allanruiz/Documents/ITESM/4toSemestre/Redes/Ataquefuerzabrutaportelnet.mp4");
+            File file = new File(filePath);
             grab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
             return true;
         } catch (IOException | JCodecException ex) {
@@ -60,26 +64,27 @@ public class VideoProcessor{
         }
     }
     
+    public void run(){
+        this.loadVideo();
+        this.startAnalysis();
+    }
+    
     public void startAnalysis(){
         try {
             Picture picture;
             
             while (null != (picture = grab.getNativeFrame())) {
-                System.out.println(picture.getData().length);
                 BufferedImage imagen = AWTUtil.toBufferedImage(picture);
                 
-                WritableRaster raster = imagen.getRaster();
-                DataBufferByte data   = (DataBufferByte)raster.getDataBuffer();
-                byte[] imageData = data.getData();
+                BufferedImage newImage = new BufferedImage(PANEL_WIDTH, PANEL_HEIGHT,  BufferedImage.TYPE_INT_RGB);
+                Graphics g = newImage.createGraphics(); 
+                g.drawImage(imagen, 0, 0, PANEL_WIDTH, PANEL_HEIGHT, null);
+                g.dispose();
+                
+                interfaz.showImage(newImage);
                 
                 sendApiRequest(imagen);
-                ImageIcon icon = new ImageIcon(imagen);
                 
-                
-                /*video.removeAll();
-                video.add(new JLabel(icon));
-                video.updateUI();
-                */
             }
         } catch (IOException ex) {
             Logger.getLogger(VideoProcessor.class.getName()).log(Level.SEVERE, null, ex);
@@ -91,11 +96,13 @@ public class VideoProcessor{
     private void sendApiRequest(BufferedImage image){
         HttpClient httpclient = new DefaultHttpClient();
         
-        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/a775627c-fafd-444e-9e97-9f32eb8d248c/image?iterationId=ef7e50ba-46d6-494e-b948-3d6fccaabad4";
+        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/669f559e-703f-4faf-b761-dfa2e23282cc/image?iterationId=f2662e8d-4531-4fcd-a945-84f98299008e";
         File imageFile = new File("image.jpg");
         try
         {
             URIBuilder builder = new URIBuilder(uriBase);
+            
+            
             
             imageFile = generateBWImage(image);
             
@@ -105,7 +112,7 @@ public class VideoProcessor{
             
             // Request headers.
             request.setHeader("Content-Type", "application/octet-stream");
-            request.setHeader("Prediction-Key", "e81add4e982b4523a58130308825fc40");
+            request.setHeader("Prediction-Key", "d3f194d3f4734d84a4978e2bbf688cd4");
 
             // Request body.
             FileEntity reqEntity = new FileEntity(imageFile);
@@ -136,7 +143,7 @@ public class VideoProcessor{
     
     
     private File generateBWImage(BufferedImage image) throws IOException{
-        BufferedImage bwImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_BYTE_GRAY);
+        BufferedImage bwImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = bwImage.createGraphics();
         graphics.drawImage(image, 0, 0, null);
         File imageFile = new File("temp/image.jpg");

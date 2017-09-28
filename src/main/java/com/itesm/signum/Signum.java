@@ -38,8 +38,6 @@ public class Signum {
     }
     
     public static void start(){
-        VideoProcessor video = new VideoProcessor(null, null);
-        video.loadVideo("");
-        video.startAnalysis();
+        SignumInterface.main(null);
     }
 }
