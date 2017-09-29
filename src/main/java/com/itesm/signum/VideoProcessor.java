@@ -37,6 +37,7 @@ import org.jcodec.api.JCodecException;
 import org.jcodec.common.io.NIOUtils;
 import org.jcodec.common.model.Picture;
 import org.jcodec.scale.AWTUtil;
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class VideoProcessor extends Thread{
@@ -45,10 +46,13 @@ public class VideoProcessor extends Thread{
     private FrameGrab grab;
     private final int PANEL_WIDTH = 388, PANEL_HEIGHT = 307;
     private String filePath;
+    private String lastTranslated = "";
+    private int fps;
     
     public VideoProcessor(SignumInterface interfaz, String filePath){
         this.interfaz = interfaz;
         this.filePath = filePath;
+        fps = 30;
     }
     
     public boolean loadVideo(){
@@ -83,7 +87,12 @@ public class VideoProcessor extends Thread{
                 
                 interfaz.showImage(newImage);
                 
-                sendApiRequest(imagen);
+                if(fps == 30){
+                    sendApiRequest(imagen);
+                    fps = 0;
+                    continue;
+                }
+                fps++;
                 
             }
         } catch (IOException ex) {
@@ -96,7 +105,7 @@ public class VideoProcessor extends Thread{
     private void sendApiRequest(BufferedImage image){
         HttpClient httpclient = new DefaultHttpClient();
         
-        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/669f559e-703f-4faf-b761-dfa2e23282cc/image?iterationId=f2662e8d-4531-4fcd-a945-84f98299008e";
+        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/669f559e-703f-4faf-b761-dfa2e23282cc/image?iterationId=90581bcb-6e7d-44f3-ab1d-6a5ec5b6a8b9";
         File imageFile = new File("image.jpg");
         try
         {
@@ -129,6 +138,7 @@ public class VideoProcessor extends Thread{
                 JSONObject json = new JSONObject(jsonString);
                 System.out.println("REST Response:\n");
                 System.out.println(json.toString(2));
+                processJSON(json);
             }
         }
         catch (Exception e)
@@ -149,5 +159,18 @@ public class VideoProcessor extends Thread{
         File imageFile = new File("temp/image.jpg");
         ImageIO.write(bwImage, "jpg", imageFile); 
         return imageFile;
+    }
+    
+    
+    private void processJSON(JSONObject json){
+        JSONArray predictions = json.getJSONArray("Predictions");
+        JSONObject bestPrediction = predictions.getJSONObject(0);
+        String word = bestPrediction.getString("Tag");
+        double probability = bestPrediction.getDouble("Probability")*100;
+        if(probability>20 && !word.equals(lastTranslated)){
+            lastTranslated = word;
+            interfaz.setTranslatedText(word);
+        }
+        
     }
 }
