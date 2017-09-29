@@ -167,7 +167,7 @@ public class VideoProcessor extends Thread{
         JSONObject bestPrediction = predictions.getJSONObject(0);
         String word = bestPrediction.getString("Tag");
         double probability = bestPrediction.getDouble("Probability")*100;
-        if(probability>20 && !word.equals(lastTranslated)){
+        if(probability>45 && !word.equals(lastTranslated)){
             lastTranslated = word;
             interfaz.setTranslatedText(word);
         }
