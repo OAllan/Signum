@@ -165,6 +165,7 @@ public class SignumInterface extends javax.swing.JFrame {
 
     private void detenerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_detenerActionPerformed
         detener.setEnabled(false);
+        ((VideoProcessor)video).stopPlayer();
         video.stop();
         
     }//GEN-LAST:event_detenerActionPerformed

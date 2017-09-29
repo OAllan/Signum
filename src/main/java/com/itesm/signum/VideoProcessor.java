@@ -43,11 +43,13 @@ import org.json.JSONObject;
 public class VideoProcessor extends Thread{
     
     private SignumInterface interfaz;
-    private FrameGrab grab;
-    private final int PANEL_WIDTH = 388, PANEL_HEIGHT = 307;
+    private FrameGrab grab, videoGrab;
+    
     private String filePath;
     private String lastTranslated = "";
     private int fps;
+    private Thread videoPlayer;
+    
     
     public VideoProcessor(SignumInterface interfaz, String filePath){
         this.interfaz = interfaz;
@@ -59,6 +61,7 @@ public class VideoProcessor extends Thread{
         try {
             File file = new File(filePath);
             grab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
+            videoGrab = FrameGrab.createFrameGrab(NIOUtils.readableChannel(file));
             return true;
         } catch (IOException | JCodecException ex) {
             Logger.getLogger(VideoProcessor.class.getName()).log(Level.SEVERE, null, ex);
@@ -73,19 +76,18 @@ public class VideoProcessor extends Thread{
         this.startAnalysis();
     }
     
+    public void stopPlayer(){
+        videoPlayer.stop();
+    }
+    
     public void startAnalysis(){
         try {
             Picture picture;
-            
+            videoPlayer = new VideoPlayer(interfaz, videoGrab);
+            videoPlayer.start();
             while (null != (picture = grab.getNativeFrame())) {
                 BufferedImage imagen = AWTUtil.toBufferedImage(picture);
                 
-                BufferedImage newImage = new BufferedImage(PANEL_WIDTH, PANEL_HEIGHT,  BufferedImage.TYPE_INT_RGB);
-                Graphics g = newImage.createGraphics(); 
-                g.drawImage(imagen, 0, 0, PANEL_WIDTH, PANEL_HEIGHT, null);
-                g.dispose();
-                
-                interfaz.showImage(newImage);
                 
                 if(fps == 30){
                     sendApiRequest(imagen);
@@ -105,7 +107,7 @@ public class VideoProcessor extends Thread{
     private void sendApiRequest(BufferedImage image){
         HttpClient httpclient = new DefaultHttpClient();
         
-        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/669f559e-703f-4faf-b761-dfa2e23282cc/image?iterationId=90581bcb-6e7d-44f3-ab1d-6a5ec5b6a8b9";
+        String uriBase = "https://southcentralus.api.cognitive.microsoft.com/customvision/v1.0/Prediction/669f559e-703f-4faf-b761-dfa2e23282cc/image?iterationId=3cefa446-ef98-4679-b7f6-827a50bb9ed8";
         File imageFile = new File("image.jpg");
         try
         {
